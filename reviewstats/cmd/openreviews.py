@@ -78,6 +78,8 @@ def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter, options):
                          key=lambda change: change['age2'], reverse=True)
     age3_sorted = sorted(waiting_on_reviewer,
                          key=lambda change: change['age3'], reverse=True)
+    age_submitter_sorted = sorted(waiting_on_submitter,
+                        key=lambda change: change['age4'], reverse=True)
 
     result = []
     result.append(('Projects', '%s' % [project['name']
@@ -160,6 +162,14 @@ def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter, options):
                                        change['subject']))
     stats.append(('Oldest reviews (time since first revision)',
                   changes))
+
+    changes = []
+    for change in age_submitter_sorted[:options.longest_waiting]:
+        changes.append('%s %s (%s)' % (sec_to_period_string(change['age4']),
+                                       format_url(change['url'], options),
+                                       change['subject']))
+    stats.append(('Longest stuck reviews (age of latest rev with -1'
+                  ' or -2)', changes))
 
     result.append(stats)
 
@@ -312,18 +322,21 @@ def main(argv=None):
         waiting_for_review = True
         approvals = latest_patch.get('approvals', [])
         approvals.sort(key=lambda a: a['grantedOn'])
+        age_of_latest_nack = None
         for review in approvals:
             if review['type'] not in ('CRVW', 'VRIF',
                                       'Code-Review', 'Verified'):
                 continue
             if review['value'] in ('-1', '-2'):
                 waiting_for_review = False
+                age_of_latest_nack = now_ts - review['grantedOn']
                 break
 
         change['age'] = utils.get_age_of_patch(latest_patch, now_ts)
         change['age2'] = utils.get_age_of_patch(change['patchSets'][0], now_ts)
         patch = find_oldest_no_nack(change)
         change['age3'] = utils.get_age_of_patch(patch, now_ts) if patch else 0
+        change['age4'] = age_of_latest_nack
 
         if waiting_for_review:
             waiting_on_reviewer.append(change)
