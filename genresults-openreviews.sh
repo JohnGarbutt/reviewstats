@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set +x
 projects=$1
 all=0
 
