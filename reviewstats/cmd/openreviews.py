@@ -122,6 +122,10 @@ def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter, options):
                                     % (quartile_age(waiting_on_reviewer,
                                                     quartile=3,
                                                     key='age3'))))
+    last_without_nack_stats.append((
+        'Number waiting more than %i days' % options.waiting_more,
+        '%i' % (number_waiting_more_than(
+            age3_sorted, 60 * 60 * 24 * options.waiting_more))))
     stats.append(('Stats since the last revision without -1 or -2 ',
                  last_without_nack_stats))
 
@@ -136,8 +140,32 @@ def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter, options):
     first_rev_stats.append(('3rd quartile wait time', '%s'
                             % (quartile_age(waiting_on_reviewer, quartile=3,
                                             key='age2'))))
+    first_rev_stats.append((
+        'Number waiting more than %i days' % options.waiting_more,
+        '%i' % (number_waiting_more_than(
+            age2_sorted, 60 * 60 * 24 * options.waiting_more))))
     stats.append(('Stats since the first revision (total age)',
                   first_rev_stats))
+
+    waiting_after_neg_stats = []
+    waiting_after_neg_stats.append(('Average wait time', '%s'
+                            % (average_age(waiting_on_submitter,
+                                           key='age4'))))
+    waiting_after_neg_stats.append(('1st quartile wait time', '%s'
+                            % (quartile_age(waiting_on_submitter, quartile=1,
+                                            key='age4'))))
+    waiting_after_neg_stats.append(('Median wait time', '%s'
+                            % (quartile_age(waiting_on_submitter,
+                                            key='age4'))))
+    waiting_after_neg_stats.append(('3rd quartile wait time', '%s'
+                            % (quartile_age(waiting_on_submitter, quartile=3,
+                                            key='age4'))))
+    waiting_after_neg_stats.append((
+        'Number waiting more than %i days' % options.waiting_more,
+        '%i' % (number_waiting_more_than(
+            age_submitter_sorted, 60 * 60 * 24 * options.waiting_more))))
+    stats.append(('Stats since last negative vote on current patch',
+                  waiting_after_neg_stats))
 
     changes = []
     for change in age_sorted[:options.longest_waiting]:
@@ -168,8 +196,8 @@ def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter, options):
         changes.append('%s %s (%s)' % (sec_to_period_string(change['age4']),
                                        format_url(change['url'], options),
                                        change['subject']))
-    stats.append(('Longest stuck reviews (age of latest rev with -1'
-                  ' or -2)', changes))
+    stats.append(('Longest stuck reviews (time since current -1'
+                  ' or -2 vote)', changes))
 
     result.append(stats)
 
