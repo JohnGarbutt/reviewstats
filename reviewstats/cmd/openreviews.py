@@ -71,7 +71,8 @@ def format_url(url, options):
                        ('">%s</a>' % url) if options.html else '')
 
 
-def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter, options):
+def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter,
+              waiting_on_plus_two, options):
     age_sorted = sorted(waiting_on_reviewer,
                         key=lambda change: change['age'], reverse=True)
     age2_sorted = sorted(waiting_on_reviewer,
@@ -198,6 +199,12 @@ def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter, options):
                                        change['subject']))
     stats.append(('Longest stuck reviews (time since current -1'
                   ' or -2 vote)', changes))
+
+    changes = []
+    for change in waiting_on_plus_two:
+        changes.append('%s (%s)' % (format_url(change['url'], options),
+                                    change['subject']))
+    stats.append(('Waiting for one more plus two', changes))
 
     result.append(stats)
 
@@ -331,6 +338,7 @@ def main(argv=None):
 
     waiting_on_submitter = []
     waiting_on_reviewer = []
+    waiting_on_plus_two = []
 
     now = datetime.datetime.utcnow()
     now_ts = calendar.timegm(now.timetuple())
@@ -351,12 +359,16 @@ def main(argv=None):
         approvals = latest_patch.get('approvals', [])
         approvals.sort(key=lambda a: a['grantedOn'])
         age_of_latest_nack = None
+        has_plus_two = False
         for review in approvals:
+            if review['value'] in ('+2'):
+                has_plus_two = True
             if review['type'] not in ('CRVW', 'VRIF',
                                       'Code-Review', 'Verified'):
                 continue
             if review['value'] in ('-1', '-2'):
                 waiting_for_review = False
+                has_plus_two = False
                 age_of_latest_nack = now_ts - review['grantedOn']
                 break
 
@@ -366,13 +378,15 @@ def main(argv=None):
         change['age3'] = utils.get_age_of_patch(patch, now_ts) if patch else 0
         change['age4'] = age_of_latest_nack
 
+        if has_plus_two:
+            waiting_on_plus_two.append(change)
         if waiting_for_review:
             waiting_on_reviewer.append(change)
         else:
             waiting_on_submitter.append(change)
 
     stats = gen_stats(projects, waiting_on_reviewer, waiting_on_submitter,
-                      options)
+                      waiting_on_plus_two, options)
 
     if options.output == '-':
         output = sys.stdout
