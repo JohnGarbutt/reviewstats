@@ -81,6 +81,8 @@ def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter,
                          key=lambda change: change['age3'], reverse=True)
     age_submitter_sorted = sorted(waiting_on_submitter,
                         key=lambda change: change['age4'], reverse=True)
+    age_plus_two_sorted = sorted(waiting_on_plus_two,
+                        key=lambda change: change['age'], reverse=True)
 
     result = []
     result.append(('Projects', '%s' % [project['name']
@@ -201,10 +203,12 @@ def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter,
                   ' or -2 vote)', changes))
 
     changes = []
-    for change in waiting_on_plus_two:
-        changes.append('%s (%s)' % (format_url(change['url'], options),
-                                    change['subject']))
-    stats.append(('Waiting for one more plus two', changes))
+    for change in age_plus_two_sorted:
+        changes.append('%s %s (%s)' % (sec_to_period_string(change['age']),
+                                       format_url(change['url'], options),
+                                       change['subject']))
+    stats.append(('Waiting for one more plus two (based on latest revision)',
+                  changes))
 
     result.append(stats)
 
