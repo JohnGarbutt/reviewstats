@@ -186,6 +186,9 @@ def get_changes(projects, ssh_user, ssh_key, only_open=False, stable='',
 
             cmd = ('gerrit query %s --all-approvals --patch-sets '
                    '--format JSON' % projects_q(project))
+            commit_message = True
+            if commit_message:
+                cmd += ' --commit-message'
             if only_open:
                 cmd += ' status:open'
             if stable:
