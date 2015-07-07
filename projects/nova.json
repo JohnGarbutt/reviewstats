@@ -2,7 +2,6 @@
     "name": "nova",
     "subprojects": [
         "openstack/nova",
-        "openstack/nova-specs",
         "openstack/os-vif",
         "openstack/python-novaclient"
     ],
