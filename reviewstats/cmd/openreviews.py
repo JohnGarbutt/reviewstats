@@ -19,6 +19,7 @@ import datetime
 import getpass
 import logging
 import optparse
+import re
 import sys
 
 from reviewstats import utils
@@ -210,6 +211,37 @@ def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter,
     stats.append(('Waiting for one more plus two (based on latest revision)',
                   changes))
 
+    # TODO - need to add stats summary
+    has_blueprint = [change for change in waiting_on_reviewer \
+                     if change['blueprint']]
+    blueprints = {}
+    for change in has_blueprint:
+        blueprints_key = change['blueprint']
+        if blueprints_key not in blueprints:
+            blueprints[blueprints_key] = change
+            change["patches"] = 1
+        else:
+            old_change = blueprints[blueprints_key]
+            old_change["patches"] += 1
+            if change['age2'] > old_change['age2']:
+                # pick the oldest change, if there are multiple
+                blueprints[blueprints_key] = change
+                change["patches"] = old_change["patches"]
+
+    since_blueprint_patch_started = sorted(blueprints.values(),
+                         key=lambda change: change['age2'], reverse=True)
+
+    changes = []
+    for change in since_blueprint_patch_started:
+        blueprint_url = "https://blueprints.launchpad.net/nova/+spec/%s"
+        changes.append('%s %s (%s patches: %s)' %
+                (sec_to_period_string(change['age2']),
+                 format_url(change['url'], options),
+                 format_url(blueprint_url % change['blueprint'], options),
+                 change["patches"]))
+    stats.append(('Oldest blueprint patches waiting for a review (time since first revision)',
+                  changes))
+
     result.append(stats)
 
     return result
@@ -282,6 +314,25 @@ def find_oldest_no_nack(change):
             break
         last_patch = patch
     return last_patch
+
+
+#taken from jeepyb
+SPEC_RE = re.compile(r'\b(blueprint|bp)\b[ \t]*[#:]?[ \t]+(\S+)', re.I)
+
+
+def get_blueprints(message):
+    #taken from jeepyb
+    bps = set([m.group(2) for m in SPEC_RE.finditer(message)])
+    return list(bps)
+
+
+def extract_blueprint(change):
+    msg = change.get('commitMessage')
+    if msg is not None:
+        bps = get_blueprints(msg)
+        if len(bps) > 0:
+            bp = max(bps, key=lambda x: len(x))
+            return bp
 
 
 def main(argv=None):
@@ -381,6 +432,7 @@ def main(argv=None):
         patch = find_oldest_no_nack(change)
         change['age3'] = utils.get_age_of_patch(patch, now_ts) if patch else 0
         change['age4'] = age_of_latest_nack
+        change['blueprint'] = extract_blueprint(change)
 
         if has_plus_two:
             waiting_on_plus_two.append(change)
