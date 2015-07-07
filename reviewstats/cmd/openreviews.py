@@ -242,6 +242,35 @@ def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter,
     stats.append(('Oldest blueprint patches waiting for a review (time since first revision)',
                   changes))
 
+    # TODO - worst cut and paste job EVER!
+    tag = 'bug'
+    has_blueprint = [change for change in waiting_on_reviewer \
+                     if change[tag]]
+    blueprints = {}
+    for change in has_blueprint:
+        blueprints_key = change[tag]
+        if blueprints_key not in blueprints:
+            blueprints[blueprints_key] = change
+            change["patches"] = 1
+        else:
+            old_change = blueprints[blueprints_key]
+            old_change["patches"] += 1
+            if change['age2'] > old_change['age2']:
+                # pick the oldest change, if there are multiple
+                blueprints[blueprints_key] = change
+                change["patches"] = old_change["patches"]
+    since_blueprint_patch_started = sorted(blueprints.values(),
+                         key=lambda change: change['age2'], reverse=True)
+    changes = []
+    for change in since_blueprint_patch_started:
+        blueprint_url = "https://bugs.launchpad.net/nova/+bug/%s"
+        changes.append('%s %s (%s patches: %s)' %
+                (sec_to_period_string(change['age2']),
+                 format_url(change['url'], options),
+                 format_url(blueprint_url % change[tag], options),
+                 change["patches"]))
+    stats.append(('Oldest %s patches waiting for a review (time since first revision)' % tag,
+                  changes))
     result.append(stats)
 
     return result
@@ -333,6 +362,25 @@ def extract_blueprint(change):
         if len(bps) > 0:
             bp = max(bps, key=lambda x: len(x))
             return bp
+
+
+def get_bug(message):
+    part1 = r'^[\t ]*(?P<prefix>[-\w]+)?[\s:]*'
+    part2 = r'(?:\b(?:bug|lp)\b[\s#:]*)+'
+    part3 = r'(?P<bug_number>\d+)\s*?$'
+    regexp = part1 + part2 + part3
+    matches = re.finditer(regexp, message, flags=re.I | re.M)
+    for match in matches:
+        prefix = match.group('prefix')
+        bug_num = match.group('bug_number')
+        # TODO what if its for two bugs? meh
+        return bug_num
+
+
+def extract_bug(change):
+    msg = change.get('commitMessage')
+    if msg is not None:
+        return get_bug(msg)
 
 
 def main(argv=None):
@@ -433,6 +481,7 @@ def main(argv=None):
         change['age3'] = utils.get_age_of_patch(patch, now_ts) if patch else 0
         change['age4'] = age_of_latest_nack
         change['blueprint'] = extract_blueprint(change)
+        change['bug'] = extract_bug(change)
 
         if has_plus_two:
             waiting_on_plus_two.append(change)
