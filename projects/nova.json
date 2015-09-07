@@ -1,9 +1,8 @@
 {
     "name": "nova",
     "subprojects": [
-        "openstack/nova",
-        "openstack/python-novaclient"
+        "openstack/nova"
     ],
     "core-team-gerrit-group": "nova-core",
-    "lp_projects": ["nova", "python-novaclient"]
+    "lp_projects": ["nova"]
 }

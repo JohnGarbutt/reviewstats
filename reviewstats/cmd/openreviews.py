@@ -234,9 +234,10 @@ def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter,
     changes = []
     for change in since_blueprint_patch_started:
         blueprint_url = "https://blueprints.launchpad.net/nova/+spec/%s"
-        changes.append('%s %s (%s patches: %s)' %
+        changes.append('%s %s (%s %s patches: %s)' %
                 (sec_to_period_string(change['age2']),
                  format_url(change['url'], options),
+                 change['subject'],
                  format_url(blueprint_url % change['blueprint'], options),
                  change["patches"]))
     stats.append(('Oldest blueprint patches waiting for a review (time since first revision)',
@@ -264,9 +265,10 @@ def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter,
     changes = []
     for change in since_blueprint_patch_started:
         blueprint_url = "https://bugs.launchpad.net/nova/+bug/%s"
-        changes.append('%s %s (%s patches: %s)' %
+        changes.append('%s %s (%s %s patches: %s)' %
                 (sec_to_period_string(change['age2']),
                  format_url(change['url'], options),
+                 change['subject'],
                  format_url(blueprint_url % change[tag], options),
                  change["patches"]))
     stats.append(('Oldest %s patches waiting for a review (time since first revision)' % tag,
