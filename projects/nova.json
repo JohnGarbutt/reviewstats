@@ -1,10 +1,14 @@
 {
     "name": "nova",
     "subprojects": [
+<<<<<<< e94e4d0dd9c3a4c91bcc6f41c7312c2e695ed5ff
         "openstack/nova",
         "openstack/os-vif",
         "openstack/python-novaclient"
+=======
+        "openstack/nova"
+>>>>>>> fix up to bug hack
     ],
     "core-team-gerrit-group": "nova-core",
-    "lp_projects": ["nova", "python-novaclient"]
+    "lp_projects": ["nova"]
 }
