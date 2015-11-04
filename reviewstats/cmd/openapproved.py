@@ -41,6 +41,9 @@ def main(argv=None):
     optparser.add_option(
         '-u', '--user', default=getpass.getuser(), help='gerrit user')
     optparser.add_option(
+        '-P', '--password', default=getpass.getuser(),
+        help='gerrit HTTP password')
+    optparser.add_option(
         '-k', '--key', default=None, help='ssh key for gerrit')
     optparser.add_option('-s', '--stable', action='store_true',
                          help='Include stable branch commits')

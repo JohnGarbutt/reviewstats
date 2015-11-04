@@ -173,37 +173,41 @@ def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter,
 
     changes = []
     for change in age_sorted[:options.longest_waiting]:
-        changes.append('%s %s (%s) had +2: %s' % (sec_to_period_string(change['age']),
+        changes.append('%s %s (%s) core:%s had+2:%s' % (sec_to_period_string(change['age']),
                                        format_url(change['url'], options),
                                        change['subject'],
+                                       change["previous_core_vote"],
                                        change["previous_plus_two"]))
     stats.append(('Longest waiting reviews (based on latest revision)',
                  changes))
 
     changes = []
     for change in age3_sorted[:options.longest_waiting]:
-        changes.append('%s %s (%s) had +2: %s' % (sec_to_period_string(change['age3']),
+        changes.append('%s %s (%s) core:%s had+2:%s' % (sec_to_period_string(change['age3']),
                                        format_url(change['url'], options),
                                        change['subject'],
+                                       change["previous_core_vote"],
                                        change["previous_plus_two"]))
     stats.append(('Longest waiting reviews (based on oldest rev without -1 or'
                  ' -2)', changes))
 
     changes = []
     for change in age2_sorted[:options.longest_waiting]:
-        changes.append('%s %s (%s) had +2: %s' % (sec_to_period_string(change['age2']),
+        changes.append('%s %s (%s) core:%s had+2:%s' % (sec_to_period_string(change['age2']),
                                        format_url(change['url'], options),
                                        change['subject'],
+                                       change["previous_core_vote"],
                                        change["previous_plus_two"]))
     stats.append(('Oldest reviews (time since first revision)',
                   changes))
 
     changes = []
     for change in age_submitter_sorted[:options.longest_waiting]:
-        changes.append('%s %s (%s) had +2: %s' % (
+        changes.append('%s %s (%s) core:%s had+2:%s' % (
                                        sec_to_period_string(change['age4']),
                                        format_url(change['url'], options),
                                        change['subject'],
+                                       change["previous_core_vote"],
                                        change["previous_plus_two"]))
     stats.append(('Longest stuck reviews (time since current -1'
                   ' or -2 vote)', changes))
@@ -239,12 +243,13 @@ def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter,
     changes = []
     for change in since_blueprint_patch_started:
         blueprint_url = "https://blueprints.launchpad.net/nova/+spec/%s"
-        changes.append('%s %s (%s %s patches: %s, had +2: %s)' %
+        changes.append('%s %s (%s %s patches: %s, core:%s, had+2:%s)' %
                 (sec_to_period_string(change['age2']),
                  format_url(change['url'], options),
                  change['subject'],
                  format_url(blueprint_url % change['blueprint'], options),
                  change["patches"],
+                 change["previous_core_vote"],
                  change["previous_plus_two"]))
     stats.append(('Oldest blueprint patches waiting for a review (time since first revision)',
                   changes))
@@ -271,12 +276,13 @@ def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter,
     changes = []
     for change in since_blueprint_patch_started:
         blueprint_url = "https://bugs.launchpad.net/nova/+bug/%s"
-        changes.append('%s %s (%s %s patches: %s, had +2: %s)' %
+        changes.append('%s %s (%s %s patches: %s, core:%s, had+2:%s)' %
                 (sec_to_period_string(change['age2']),
                  format_url(change['url'], options),
                  change['subject'],
                  format_url(blueprint_url % change[tag], options),
                  change["patches"],
+                 change["previous_core_vote"],
                  change["previous_plus_two"]))
     stats.append(('Oldest %s patches waiting for a review (time since first revision)' % tag,
                   changes))
@@ -303,12 +309,13 @@ def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter,
     changes = []
     for change in since_blueprint_patch_started:
         blueprint_url = "https://bugs.launchpad.net/nova/+bug/%s"
-        changes.append('%s %s (%s %s patches: %s, had +2: %s)' %
+        changes.append('%s %s (%s %s patches: %s, core:%s, had+2:%s)' %
                 (sec_to_period_string(change['age2']),
                  format_url(change['url'], options),
                  change['subject'],
                  format_url(blueprint_url % change[tag], options),
                  change["patches"],
+                 change["previous_core_vote"],
                  change["previous_plus_two"]))
     stats.append(('Oldest %s stuck patches (time since first revision)' % tag,
                   changes))
@@ -321,12 +328,10 @@ def gen_stats(projects, waiting_on_reviewer, waiting_on_submitter,
                          key=lambda change: change['age2'], reverse=True)
     changes = []
     for change in since_blueprint_patch_started:
-        blueprint_url = "https://bugs.launchpad.net/nova/+bug/%s"
-        changes.append('%s %s (%s %s)' %
+        changes.append('%s %s (%s)' %
                 (sec_to_period_string(change['age2']),
                  format_url(change['url'], options),
-                 change['subject'],
-                 format_url(blueprint_url % change[tag], options)))
+                 change['subject']))
     stats.append(('Oldest stuck patches with previous +2 (time since first revision)',
                  changes))
 
@@ -451,6 +456,16 @@ def has_previous_plus_two(change):
     return False
 
 
+def has_previous_core_vote(change, core_team):
+    patch_sets = change['patchSets']
+    for patch_set in patch_sets:
+        approvals = patch_set.get('approvals', [])
+        for review in approvals:
+            if review['by'].get('username', 'unknown') in core_team:
+                return True
+    return False
+
+
 def main(argv=None):
     if argv is None:
         argv = sys.argv
@@ -464,6 +479,9 @@ def main(argv=None):
         help='Generate stats across all known projects (*.json)')
     optparser.add_option(
         '-u', '--user', default=getpass.getuser(), help='gerrit user')
+    optparser.add_option(
+        '-P', '--password', default=getpass.getuser(),
+        help='gerrit HTTP password')
     optparser.add_option(
         '-k', '--key', default=None, help='ssh key for gerrit')
     optparser.add_option(
@@ -506,6 +524,11 @@ def main(argv=None):
 
     changes = utils.get_changes(projects, options.user, options.key,
                                 only_open=True, server=options.server)
+
+    core_team = set()
+    for project in projects:
+        core_team.update(utils.get_core_team(project, options.server,
+                                             options.user, options.password))
 
     waiting_on_submitter = []
     waiting_on_reviewer = []
@@ -552,6 +575,7 @@ def main(argv=None):
         change['bug'] = extract_bug(change)
         change['has_plus_two'] = has_plus_two
         change['previous_plus_two'] = has_previous_plus_two(change)
+        change['previous_core_vote'] = has_previous_core_vote(change, core_team)
 
         if has_plus_two:
             waiting_on_plus_two.append(change)
