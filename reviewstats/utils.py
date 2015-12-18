@@ -145,7 +145,8 @@ def get_changes(projects, ssh_user, ssh_key, only_open=False, stable='',
             # The cache is in the old list format
             changes = {}
 
-        sortkey = None
+        #sortkey = None
+        start_at = 0
         while True:
             connect_attempts = 3
             for attempt in range(connect_attempts):
@@ -174,16 +175,21 @@ def get_changes(projects, ssh_user, ssh_key, only_open=False, stable='',
             commit_message = True
             if commit_message:
                 cmd += ' --commit-message'
+            if start_at:
+                cmd += ' --start %s' % start_at
             if only_open:
                 cmd += ' status:open'
             if stable:
                 cmd += ' branch:stable/%s' % stable
-            if sortkey:
-                cmd += ' resume_sortkey:%s' % sortkey
-            else:
+            #if sortkey:
+            #    cmd += ' resume_sortkey:%s' % sortkey
+            if start_at == 0:
                 # Get a small set the first time so we can get to checking
                 # againt the cache sooner
                 cmd += ' limit:5'
+            else:
+                cmd += ' limit:100'
+
             try:
                 stdin, stdout, stderr = client.exec_command(cmd)
             except paramiko.SSHException:
@@ -210,7 +216,7 @@ def get_changes(projects, ssh_user, ssh_key, only_open=False, stable='',
                     # version, we're done.
                     end_of_changes = True
                     break
-                sortkey = new_change['sortKey']
+                start_at += 1
                 changes[new_change['id']] = new_change
             if end_of_changes:
                 break
