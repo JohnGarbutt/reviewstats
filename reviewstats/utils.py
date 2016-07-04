@@ -101,7 +101,7 @@ def projects_q(project):
 
 
 def get_changes(projects, ssh_user, ssh_key, only_open=False, stable='',
-                server='review.openstack.org'):
+                server='review.openstack.org', cached_only=False):
     """Get the changesets data list.
 
     :param projects: List of gerrit project names.
@@ -162,6 +162,11 @@ def get_changes(projects, ssh_user, ssh_key, only_open=False, stable='',
                 break
 
         while True:
+            if cached_only:
+                logging.debug("Using cached changes.")
+                all_changes.update(changes)
+                break
+
             connect_attempts = 3
             for attempt in range(connect_attempts):
                 if connected:
