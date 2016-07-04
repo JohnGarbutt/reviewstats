@@ -200,6 +200,7 @@ def get_changes(projects, ssh_user, ssh_key, only_open=False, stable='',
                 # againt the cache sooner
                 cmd += ' limit:5'
             try:
+                print cmd
                 stdin, stdout, stderr = client.exec_command(cmd)
             except paramiko.SSHException:
                 try:
