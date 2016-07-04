@@ -8,8 +8,10 @@
 # distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
-# under the License.
+# under the Lic
 
+import calendar
+import datetime
 import logging
 import getpass
 import optparse
@@ -66,6 +68,13 @@ def main(argv=None):
 
     processed_changes = []
     for change in changes:
+        if 'rowCount' in change:
+            continue
+        if 'stable' in change['branch']:
+            continue
+        if utils.is_workinprogress(change):
+            # Filter out WORKINPROGRESS
+            continue
 
         merged_on = None
         abandoned_on = None
@@ -95,4 +104,31 @@ def main(argv=None):
         })
 
     pprint.pprint(processed_changes)
-    print len(changes)
+    print "Total changes: %s" % len(changes)
+
+    now = datetime.datetime.utcnow()
+    now_ts = calendar.timegm(now.timetuple())
+
+    def count_open_changes(processed_changes, timestamp):
+        open_count = 0
+        total_count = 0
+        for change in processed_changes:
+            if change['created'] > timestamp:
+                # change is from the future
+                continue
+            total_count += 1
+
+            open_in_window = False
+            if change['is_open']:
+                open_in_window = True
+            elif change['closed_on'] > timestamp:
+                open_in_window = True
+
+            if open_in_window:
+                open_count += 1
+        return open_count, total_count
+
+    SECONDS_IN_A_WEEK = 60 * 60 * 24 * 7
+    for i in range(12):
+        print count_open_changes(processed_changes, now_ts - SECONDS_IN_A_WEEK * i)
+
